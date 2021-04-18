@@ -1,9 +1,10 @@
 package com.example.restfulwebservice.user;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -24,7 +25,39 @@ public class UserController {
 
     // GET /users/1 or users/10
     @GetMapping("/users/{id}")
-    public User retrieveUser(@PathVariable int id){
-        return service.findOne(id);
+    public User retrieveUser(@PathVariable int id) {
+        User user = service.findOne(id);
+
+        if(user==null){
+            throw new UserNotFoundException(String.format("ID[%s] not found", id));
+        }
+        return user;
+    }
+
+    @PostMapping("/users")
+    public ResponseEntity<User> createUser(@RequestBody User user){
+        User savedUser=service.save(user);
+
+        //GET 방식과 POST 방식의 응답 코드를 다르게 제어하기 위해 사용되는 ServletUriComponentsBuilder
+        //서버에서 반환시켜 주려고 하는 데이터 값을 ResponseEntity 에 담아서 전달
+        //fromCurrentRequest : 현재 요청된 request 값을 사용한다
+       URI location=ServletUriComponentsBuilder.fromCurrentRequest()
+               //가변 변수
+               .path("/{id}")
+               //요청된 사용자의 추가
+                .buildAndExpand(savedUser.getId())
+               //어떤 uri를 가지고 추가된 리소스를 확인할 수 있는지 정보를 반환 (상세정보 보기가 가능한 uri)
+               .toUri();
+
+        return ResponseEntity.created(location).build();
+    }
+
+    @DeleteMapping("/users/{id}")
+    public void deleteUser(@PathVariable int id){
+        User user=service.deleteById(id);
+
+        if(user==null){
+            throw new UserNotFoundException(String.format("ID[%s] not found",id));
+        }
     }
 }
